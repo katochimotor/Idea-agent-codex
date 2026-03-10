@@ -279,6 +279,24 @@ CREATE TABLE IF NOT EXISTS problem_clusters (
 CREATE INDEX IF NOT EXISTS idx_problem_clusters_niche
     ON problem_clusters(niche_label, created_at DESC);
 
+CREATE TABLE IF NOT EXISTS opportunities (
+    id INTEGER PRIMARY KEY,
+    cluster_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT NOT NULL,
+    pain_score REAL NOT NULL,
+    frequency_score REAL NOT NULL,
+    solution_gap_score REAL NOT NULL,
+    market_score REAL NOT NULL,
+    build_complexity_score REAL NOT NULL,
+    opportunity_score REAL NOT NULL,
+    created_at TEXT NOT NULL,
+    FOREIGN KEY (cluster_id) REFERENCES problem_clusters(id) ON DELETE CASCADE
+);
+
+CREATE INDEX IF NOT EXISTS idx_opportunities_score
+    ON opportunities(opportunity_score DESC, created_at DESC);
+
 CREATE TABLE IF NOT EXISTS problem_cluster_memberships (
     id INTEGER PRIMARY KEY,
     cluster_id INTEGER NOT NULL,
@@ -304,6 +322,7 @@ CREATE TABLE IF NOT EXISTS ideas (
     summary TEXT NOT NULL,
     target_audience TEXT,
     niche_label TEXT,
+    opportunity_score REAL,
     source_type TEXT NOT NULL CHECK (source_type IN ('discussion-derived', 'ai-generated', 'hybrid')),
     generation_run_id INTEGER,
     status TEXT NOT NULL DEFAULT 'active' CHECK (status IN ('active', 'archived', 'rejected')),

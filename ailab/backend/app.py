@@ -7,6 +7,7 @@ from fastapi.responses import FileResponse
 from backend.api.routes_dashboard import router as dashboard_router
 from backend.api.routes_ideas import router as ideas_router
 from backend.api.routes_jobs import router as jobs_router
+from backend.api.routes_opportunities import router as opportunities_router
 from backend.api.routes_projects import router as projects_router
 from backend.api.routes_search import router as search_router
 from backend.api.routes_settings import router as settings_router
@@ -59,6 +60,7 @@ def create_app() -> FastAPI:
 
     app.include_router(ideas_router, prefix=settings.api_prefix)
     app.include_router(jobs_router, prefix=settings.api_prefix)
+    app.include_router(opportunities_router, prefix=settings.api_prefix)
     app.include_router(projects_router, prefix=settings.api_prefix)
     app.include_router(dashboard_router, prefix=settings.api_prefix)
     app.include_router(search_router, prefix=settings.api_prefix)

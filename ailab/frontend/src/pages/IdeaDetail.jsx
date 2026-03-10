@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { Link, useParams } from "react-router-dom";
 import { fetchIdea } from "../api/ideas_api";
 
 const SCORE_TOOLTIPS = {
@@ -51,6 +51,26 @@ export default function IdeaDetail() {
         <p>{idea.problem}</p>
       </div>
       <div className="panel">
+        <div className="panel-header">
+          <h3>Source Traceability</h3>
+          {idea.source ? <span className="soft-tag">{idea.source}</span> : null}
+        </div>
+        {idea.source_title ? <p><strong>Thread:</strong> {idea.source_title}</p> : null}
+        {idea.source_quote ? <blockquote className="idea-quote">“{idea.source_quote}”</blockquote> : null}
+        <div className="card-actions">
+          {idea.source_url ? (
+            <a className="text-link" href={idea.source_url} target="_blank" rel="noreferrer">
+              Открыть обсуждение
+            </a>
+          ) : null}
+          {idea.cluster_id ? (
+            <Link className="text-link" to={`/opportunities/${idea.cluster_id}`}>
+              Cluster details
+            </Link>
+          ) : null}
+        </div>
+      </div>
+      <div className="panel">
         <h3>Целевая аудитория</h3>
         <p>{idea.audience}</p>
       </div>
@@ -90,9 +110,12 @@ export default function IdeaDetail() {
       <div className="panel">
         <div className="panel-header">
           <h3>Отчёт</h3>
-          <span className="soft-tag" title={idea.report_path || "Путь к markdown-отчёту"}>
-            Markdown
-          </span>
+          <div className="meta-row">
+            {idea.opportunity_score ? <span className="soft-tag">Opportunity {idea.opportunity_score}</span> : null}
+            <span className="soft-tag" title={idea.report_path || "Путь к markdown-отчёту"}>
+              Markdown
+            </span>
+          </div>
         </div>
         <p className="panel-subtitle">{idea.report_path || "Путь к отчёту пока не задан."}</p>
         <pre className="report-preview">{idea.report_content || "Отчёт ещё не сгенерирован."}</pre>

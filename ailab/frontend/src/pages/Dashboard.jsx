@@ -7,59 +7,47 @@ import { createProject } from "../api/projects_api";
 import GenerateButton from "../components/GenerateButton";
 import IdeaList from "../components/IdeaList";
 import MindMapView from "../components/MindMapView";
+import PipelineRunPanel from "../components/PipelineRunPanel";
 import TrendGraph from "../components/TrendGraph";
-
-const JOB_STATUS_LABELS = {
-  queued: "В очереди",
-  running: "Выполняется",
-  completed: "Завершено",
-  failed: "Ошибка",
-  cancelled: "Отменено",
-  retrying: "Повтор"
-};
-
-function buildJobProgress(job, events) {
-  if (!job) {
-    return 0;
-  }
-  if (job.status === "completed" || job.status === "failed" || job.status === "cancelled") {
-    return 100;
-  }
-  if (job.status === "running") {
-    return Math.min(30 + (events.length * 15), 90);
-  }
-  if (job.status === "queued" || job.status === "retrying") {
-    return 15;
-  }
-  return 0;
-}
 
 export default function Dashboard() {
   const navigate = useNavigate();
-  const [dashboard, setDashboard] = useState({ trends: [] });
+  const [dashboard, setDashboard] = useState({
+    trends: [],
+    latest_results: [],
+    top_opportunities: [],
+    discovery_insights: [],
+    latest_pipeline_run: null,
+    latest_pipeline_events: []
+  });
   const [analytics, setAnalytics] = useState({
     ideas_generated_today: 0,
     average_score: 0,
     top_niches: [],
-    problems_detected: 0
+    problems_detected: 0,
+    clusters_detected: 0,
+    top_opportunities: 0
   });
   const [ideas, setIdeas] = useState([]);
   const [loading, setLoading] = useState(false);
   const [job, setJob] = useState(null);
   const [jobEvents, setJobEvents] = useState([]);
-  const [jobError, setJobError] = useState("");
   const [pageError, setPageError] = useState("");
   const [pageLoading, setPageLoading] = useState(true);
   const [creatingProjectId, setCreatingProjectId] = useState(null);
 
+  async function loadDashboardState() {
+    const [dashboardPayload, analyticsPayload, ideasPayload] = await Promise.all([fetchDashboard(), fetchAnalytics(), fetchIdeas()]);
+    setDashboard(dashboardPayload);
+    setAnalytics(analyticsPayload);
+    setIdeas(ideasPayload);
+    setJob(dashboardPayload.latest_pipeline_run || null);
+    setJobEvents(dashboardPayload.latest_pipeline_events || []);
+  }
+
   useEffect(() => {
-    Promise.all([fetchDashboard(), fetchAnalytics(), fetchIdeas()])
-      .then(([dashboardPayload, analyticsPayload, ideasPayload]) => {
-        setDashboard(dashboardPayload);
-        setAnalytics(analyticsPayload);
-        setIdeas(ideasPayload);
-        setPageError("");
-      })
+    loadDashboardState()
+      .then(() => setPageError(""))
       .catch((error) => {
         setPageError(error.message || "Не удалось загрузить dashboard.");
       })
@@ -69,7 +57,7 @@ export default function Dashboard() {
   }, []);
 
   useEffect(() => {
-    if (!job?.id || ["completed", "failed", "cancelled"].includes(job.status)) {
+    if (!job?.id || ["completed", "failed", "cancelled"].includes(job.status) || !loading) {
       return undefined;
     }
 
@@ -84,24 +72,20 @@ export default function Dashboard() {
         setJobEvents(nextEvents);
 
         if (nextJob.status === "completed") {
-          const [nextIdeas, nextAnalytics] = await Promise.all([fetchIdeas(), fetchAnalytics()]);
+          await loadDashboardState();
           if (!active) {
             return;
           }
-          setIdeas(nextIdeas);
-          setAnalytics(nextAnalytics);
           setLoading(false);
-          setJobError("");
         } else if (nextJob.status === "failed" || nextJob.status === "cancelled") {
           setLoading(false);
-          setJobError(nextJob.error_message || `Задача завершилась со статусом ${nextJob.status}`);
         }
       } catch (error) {
         if (!active) {
           return;
         }
+        setPageError(error.message || "Не удалось обновить состояние задачи.");
         setLoading(false);
-        setJobError(error.message || "Не удалось обновить состояние задачи.");
       }
     };
 
@@ -112,22 +96,23 @@ export default function Dashboard() {
       active = false;
       window.clearInterval(timer);
     };
-  }, [job?.id, job?.status]);
+  }, [job?.id, job?.status, loading]);
 
   async function handleDiscover() {
     setLoading(true);
-    setJobError("");
+    setPageError("");
     setJobEvents([]);
     try {
       const nextJob = await enqueueDiscoverJob();
       setJob({
         id: nextJob.job_id,
         status: nextJob.status,
-        job_type: nextJob.job_type
+        job_type: nextJob.job_type,
+        result: null
       });
     } catch (error) {
       setLoading(false);
-      setJobError(error.message || "Не удалось создать задачу поиска идей.");
+      setPageError(error.message || "Не удалось создать задачу поиска идей.");
     }
   }
 
@@ -144,19 +129,16 @@ export default function Dashboard() {
     }
   }
 
-  const progressValue = buildJobProgress(job, jobEvents);
-  const latestEvent = jobEvents[jobEvents.length - 1];
-  const currentStage = latestEvent?.payload?.stage_label || "Ожидание";
-  const jobPanelMessage =
-    jobError || latestEvent?.message || (loading ? "Ожидаем новые события pipeline..." : "Pipeline ещё не запускался.");
+  const latestIdeas = dashboard.latest_results?.length ? dashboard.latest_results : ideas.slice(0, 6);
 
   return (
     <div className="dashboard-layout">
       {pageError ? <div className="panel"><p className="job-error">{pageError}</p></div> : null}
+
       <section className="hero-panel">
         <div>
-          <p className="eyebrow">Исследование рынка</p>
-          <h1>{dashboard.hero_title || "Лаборатория идей"}</h1>
+          <p className="eyebrow">Research Interface</p>
+          <h1>{dashboard.hero_title || "AI Idea Research Lab"}</h1>
           <p>{dashboard.hero_subtitle}</p>
         </div>
         <GenerateButton onClick={handleDiscover} loading={loading} polling={Boolean(job?.id && loading)} />
@@ -164,66 +146,91 @@ export default function Dashboard() {
 
       <section className="stats-row">
         <div className="stat-card">
-          <span>Идей сегодня</span>
+          <span>Ideas generated today</span>
           <strong>{analytics.ideas_generated_today ?? "-"}</strong>
         </div>
         <div className="stat-card">
-          <span>Средний score</span>
-          <strong>{analytics.average_score ?? "-"}</strong>
-        </div>
-        <div className="stat-card">
-          <span>Проблем найдено</span>
+          <span>Problems discovered</span>
           <strong>{analytics.problems_detected ?? "-"}</strong>
         </div>
         <div className="stat-card">
-          <span>Главные ниши</span>
-          <strong>{analytics.top_niches?.join(", ") || "-"}</strong>
+          <span>Clusters detected</span>
+          <strong>{analytics.clusters_detected ?? "-"}</strong>
         </div>
+        <div className="stat-card">
+          <span>Top opportunities</span>
+          <strong>{analytics.top_opportunities ?? "-"}</strong>
+        </div>
+      </section>
+
+      <PipelineRunPanel job={job} events={jobEvents} loading={loading || pageLoading} />
+
+      <section className="panel">
+        <div className="panel-header">
+          <div>
+            <h3>Latest Pipeline Results</h3>
+            <p className="panel-subtitle">На dashboard остаются только результаты последнего pipeline run.</p>
+          </div>
+          <span className="soft-tag">{latestIdeas.length} ideas</span>
+        </div>
+        <IdeaList ideas={latestIdeas} onCreateProject={handleCreateProject} creatingProjectId={creatingProjectId} />
       </section>
 
       <section className="panel">
         <div className="panel-header">
           <div>
-            <h3>Прогресс pipeline</h3>
-            <p className="panel-subtitle">
-              {job
-                ? `Задача #${job.id}: ${JOB_STATUS_LABELS[job.status] || job.status}`
-                : "Активных задач пока нет"}
-            </p>
+            <h3>Startup Opportunities</h3>
+            <p className="panel-subtitle">Топ кластеров, отсортированных по opportunity score.</p>
           </div>
-          {job && <span className="tag">Job #{job.id}</span>}
+          <span className="tag">{dashboard.top_opportunities?.length || 0} clusters</span>
         </div>
-        <p className="panel-subtitle">Стадия: {currentStage}</p>
-
-        <div className="job-progress-bar" aria-hidden="true">
-          <div className="job-progress-fill" style={{ width: `${progressValue}%` }} />
-        </div>
-
-        <p className={jobError ? "job-error" : "panel-subtitle"}>{jobPanelMessage}</p>
-
-        <div className="job-events">
-          {jobEvents.length ? (
-            jobEvents.map((event) => (
-              <div key={event.id} className="job-event-row">
-                <span className="soft-tag">{event.payload?.stage_label || JOB_STATUS_LABELS[event.status] || event.event_type}</span>
-                <span>{event.message}</span>
-                <span className="job-event-time">{new Date(event.created_at).toLocaleTimeString()}</span>
-              </div>
+        <div className="opportunity-grid">
+          {dashboard.top_opportunities?.length ? (
+            dashboard.top_opportunities.map((item) => (
+              <button
+                key={item.cluster_id}
+                type="button"
+                className="opportunity-card"
+                onClick={() => navigate(`/opportunities/${item.cluster_id}`)}
+              >
+                <div className="panel-header">
+                  <strong>{item.title}</strong>
+                  <span className="tag">Score {item.opportunity_score}</span>
+                </div>
+                <p>{item.description}</p>
+                <div className="opportunity-meta">
+                  <span className="soft-tag">{item.problem_count} problems</span>
+                  <span className="soft-tag">{item.related_ideas} related ideas</span>
+                </div>
+              </button>
             ))
           ) : (
-            <p className="panel-subtitle">
-              {pageLoading ? "Загружаем состояние dashboard..." : "После запуска поиска здесь появятся реальные события job worker."}
-            </p>
+            <p className="panel-subtitle">После первого pipeline run здесь появятся opportunity clusters.</p>
           )}
         </div>
       </section>
 
-      <IdeaList ideas={ideas} onCreateProject={handleCreateProject} creatingProjectId={creatingProjectId} />
-
       <div className="dashboard-bottom">
+        <section className="panel">
+          <div className="panel-header">
+            <h3>Idea Discovery Insights</h3>
+          </div>
+          <div className="trend-list">
+            {dashboard.discovery_insights?.length ? (
+              dashboard.discovery_insights.map((insight) => (
+                <div key={insight.label} className="trend-pill">
+                  {insight.label}: {insight.value}
+                </div>
+              ))
+            ) : (
+              <p className="panel-subtitle">Insights появятся после накопления новых запусков.</p>
+            )}
+          </div>
+        </section>
         <TrendGraph trends={dashboard.trends} />
-        <MindMapView ideas={ideas} />
       </div>
+
+      <MindMapView ideas={latestIdeas} />
     </div>
   );
 }

@@ -2,51 +2,69 @@
 
 Дата: 2026-03-10
 
-## Что сделано в этой сессии
+## Что сделано в последней сессии
 
-- Проверена и усилена тёмная тема без редизайна интерфейса.
-- Исправлен контраст для активной навигации, secondary-кнопок, badges и служебных блоков.
-- Починена цепочка отчётов для идей:
-  - backend теперь восстанавливает markdown-отчёт, если путь есть в БД, но файл отсутствует на диске
-  - detail-страница идеи показывает путь к отчёту и markdown preview
-- Усилена обработка frontend API-ошибок для `ideas`, `dashboard`, `jobs`, `projects`.
-- Кнопка `Создать проект` блокируется во время выполнения, чтобы избежать повторных запросов.
+- В backend добавлен новый pipeline stage: `opportunity_analysis`.
+- После `cluster problems` теперь выполняется анализ opportunity signals, затем обычная генерация и scoring идей.
+- Добавлена новая таблица SQLite `opportunities`.
+- В `ideas` добавлено поле `opportunity_score`.
+- Добавлены backend-модули:
+  - `ailab/backend/services/opportunity_engine.py`
+  - `ailab/backend/controllers/opportunity_controller.py`
+  - `ailab/backend/api/routes_opportunities.py`
+  - `ailab/backend/models/opportunity_model.py`
+- Обновлена orchestration-логика:
+  - research artifacts теперь сохраняются в `documents`, `problems`, `problem_clusters`, `problem_cluster_memberships`
+  - opportunity results сохраняются в `opportunities`
+  - generated ideas получают `cluster_id` и `opportunity_score`
+  - `job_events` и `job.result.pipeline_metrics` включают opportunity-метрики
+- Dashboard обновлён:
+  - новый блок `Startup Opportunities`
+  - новый progress panel для pipeline run
+  - dashboard metrics теперь показывают реальное состояние pipeline
+- Добавлена detail-страница opportunity:
+  - `frontend/src/pages/OpportunityDetailPage.jsx`
+- Идеи и dashboard теперь показывают source traceability, cluster/opportunity context и latest pipeline results.
+
+## Что дополнительно исправлено во время live verification
+
+- Исправлен runtime bug в duplicate-ветке pipeline (`name 'existing' is not defined`).
+- Исправлена merge-логика existing ideas:
+  - при повторном pipeline run existing idea теперь корректно получает актуальные `cluster_id`, `primary_source_document_id`, `opportunity_score`
+- Исправлен offline fallback в `LLMClient`:
+  - если внешний provider не выбран, локальная генерация теперь выдаёт разные deterministic ideas по разным problem clusters
+  - это нужно, чтобы pipeline не схлопывался в одну и ту же идею при локальной проверке
 
 ## Что проверено
 
-- `npm run build` завершился успешно.
-- `python -m compileall` для backend, launcher и `project_system` завершился успешно.
-- Live smoke-test против локального FastAPI подтвердил:
-  - работу dashboard endpoints
-  - работу settings provider test/save
-  - успешное завершение `jobs/discover`
-  - получение `job_events`
-  - существование и чтение markdown-отчётов для идей
-  - успешное создание проекта через `POST /api/projects`
+- `ailab\.venv\Scripts\python.exe -m compileall ailab\backend` завершился успешно.
+- `npm run build` в `ailab/frontend` завершился успешно.
+- Live smoke-test против локального FastAPI подтверждён:
+  - discovery job завершился со статусом `completed`
+  - `opportunities` table существует
+  - `ideas.opportunity_score` существует
+  - `GET /api/opportunities` отвечает
+  - `GET /api/dashboard` показывает `top_opportunities`
+  - после job все 3 идеи имеют `cluster_id`
+  - после job все 3 идеи имеют `opportunity_score`
+  - detail endpoint opportunity возвращает `related_ideas`
 
-## Ключевые файлы, обновлённые в этой сессии
+## На чём остановились
 
-- `ailab/backend/controllers/idea_controller.py`
-- `ailab/backend/models/idea_model.py`
-- `ailab/frontend/src/pages/IdeaDetail.jsx`
-- `ailab/frontend/src/components/IdeaCard.jsx`
-- `ailab/frontend/src/api/ideas_api.js`
-- `ailab/frontend/src/api/dashboard_api.js`
-- `ailab/frontend/src/api/jobs_api.js`
-- `ailab/frontend/src/api/projects_api.js`
-- `ailab/frontend/src/styles/global.css`
-- `ailab/frontend/src/styles/dashboard.css`
-- `project_system/PROJECT_CONTEXT.md`
-- `project_system/SESSION_STATE.md`
-- `project_system/NEXT_STEPS.md`
-- `project_system/RESUME_CODEX_PROMPT.md`
-- `project_system/reconstruct_context.py`
-- `README.md`
+- Opportunity engine и opportunity dashboard flow уже работают локально.
+- Ближайшее продолжение:
+  - довести UX вокруг opportunities и cluster detail
+  - при необходимости добавить отдельную cluster detail page
+  - затем вернуться к более глубокому product-quality UI polish
 
-## Состояние на конец сессии
+## Что открыть при следующем запуске
 
-- Desktop runtime остаётся прежним:
-  - `start_app.bat` -> launcher -> FastAPI -> built React SPA -> `pywebview`
-- Dashboard и Settings работают как часть MVP, а не как mock UI.
-- Отчёты по идеям доступны через backend и отображаются на detail-странице.
-- Для продолжения работы в новой сессии сначала открыть `README.md`, затем `SESSION_REPORT.md`, затем `project_system/RESUME_CODEX_PROMPT.md`.
+1. `README.md`
+2. `SESSION_REPORT.md`
+3. `project_system/RESUME_CODEX_PROMPT.md`
+
+## Что написать Codex в новой сессии
+
+Если хотите продолжить без долгих объяснений, напишите:
+
+`Продолжаем AI Idea Research Lab с текущего SESSION_REPORT. Сначала прочитай README.md, SESSION_REPORT.md и всё в project_system, затем запусти reconstruct_context.py, проверь git status и продолжи с opportunity engine / dashboard UX с места остановки.`

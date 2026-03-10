@@ -11,6 +11,8 @@ class ExtractorAgent:
                     "problem_statement": cleaned,
                     "source": item["platform"],
                     "url": item["url"],
+                    "thread_title": item.get("title") or cleaned[:80],
+                    "quote": item["text"],
                 }
             )
         return problems

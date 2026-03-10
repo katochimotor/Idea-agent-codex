@@ -23,6 +23,7 @@
 - `routes_dashboard.py`: dashboard summary and analytics endpoints.
 - `routes_ideas.py`: idea list, synchronous discovery wrapper, idea detail.
 - `routes_jobs.py`: async job enqueueing and polling.
+- `routes_opportunities.py`: top opportunities and opportunity detail endpoints.
 - `routes_projects.py`: starter project creation endpoint.
 - `routes_search.py`: document search and embedding rebuild endpoints.
 - `routes_sources.py`: available source and CLI discovery.
@@ -35,13 +36,14 @@
 ### `backend/services/`
 
 - `pipeline_orchestration_service.py`: central orchestration service for long-running research flows.
+- `opportunity_engine.py`: computes opportunity signals for clustered problems and persists them.
 - `reddit_service.py`, `hackernews_service.py`, `rss_service.py`: current normalized source stubs.
 - `prompt_builder.py`, `text_cleaner.py`: small helpers used by agents.
 
 ### `backend/pipelines/`
 
 - `research_pipeline.py`: collector -> extractor -> cluster.
-- `idea_pipeline.py`: research pipeline -> idea generation -> scoring.
+- `idea_pipeline.py`: research pipeline -> opportunity-aware idea generation -> scoring.
 - `scoring_pipeline.py`: scoring wrapper.
 
 ### `backend/agents/`
@@ -76,7 +78,7 @@
 
 ### `backend/models/`
 
-- SQLModel table mappings for documents, ideas, jobs, runs, vectors, projects, sources, models, and clusters.
+- SQLModel table mappings for documents, ideas, jobs, runs, vectors, projects, sources, models, clusters, and opportunities.
 
 ### Runtime data/output folders
 
@@ -89,8 +91,9 @@
 
 - `src/main.jsx`: SPA entrypoint.
 - `src/App.jsx`: shared shell and routes.
-- `src/pages/Dashboard.jsx`: dashboard data loading, discovery trigger, job polling, project creation.
+- `src/pages/Dashboard.jsx`: dashboard data loading, discovery trigger, job polling, pipeline progress, startup opportunities.
 - `src/pages/IdeasPage.jsx`, `IdeaDetail.jsx`, `ProjectsPage.jsx`, `SettingsPage.jsx`: route pages.
+- `src/pages/OpportunityDetailPage.jsx`: opportunity detail and related ideas view.
 - `src/api/*.js`: fetch wrappers; now use same-origin `/api`.
 - `dist/`: production build served by FastAPI.
 - `vite.config.js`: dev server config for local development only.

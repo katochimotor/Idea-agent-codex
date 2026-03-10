@@ -25,30 +25,53 @@ class IdeaController:
             .order_by(IdeaScoreRecord.created_at.desc())
         ).first()
 
+    def _source_document(self, session: Session, idea: Idea) -> Document | None:
+        if not idea.primary_source_document_id:
+            return None
+        return session.get(Document, idea.primary_source_document_id)
+
     def _source_label(self, session: Session, idea: Idea) -> str:
-        if idea.primary_source_document_id:
-            document = session.get(Document, idea.primary_source_document_id)
-            if document:
-                source = session.get(Source, document.source_id)
-                if source:
-                    return source.display_name
+        document = self._source_document(session, idea)
+        if document:
+            source = session.get(Source, document.source_id)
+            if source:
+                return source.display_name
         return idea.source_type
+
+    def _source_payload(self, session: Session, idea: Idea) -> dict:
+        document = self._source_document(session, idea)
+        if not document:
+            return {
+                "problem": idea.summary,
+                "source_url": None,
+                "source_title": None,
+                "source_quote": None,
+            }
+        return {
+            "problem": document.content_markdown or document.content_text or idea.summary,
+            "source_url": document.canonical_url,
+            "source_title": document.title,
+            "source_quote": document.content_text,
+        }
 
     def _build_card(self, session: Session, idea: Idea) -> dict:
         score = self._latest_score(session, idea.id)
         total_score = score.total_score if score else 0.0
+        source_payload = self._source_payload(session, idea)
         return idea_to_card(
             idea,
             score=total_score,
             source=self._source_label(session, idea),
+            problem=source_payload["problem"],
+            audience=idea.target_audience,
+            source_url=source_payload["source_url"],
+            source_title=source_payload["source_title"],
+            source_quote=source_payload["source_quote"],
         )
 
     def _build_problem_text(self, session: Session, idea: Idea) -> str:
-        if idea.primary_source_document_id:
-            document = session.get(Document, idea.primary_source_document_id)
-            if document:
-                return document.content_markdown or document.content_text or idea.summary
-        return idea.summary
+        source_payload = self._source_payload(session, idea)
+        return source_payload["problem"] or idea.summary
 
     def _resolve_report_path(self, output_path: str | None, idea: Idea) -> Path:
         if output_path:
@@ -92,18 +115,73 @@ class IdeaController:
 
         return str(report_path), report_path.read_text(encoding="utf-8")
 
-    def list_ideas(self, session: Session) -> list[dict]:
+    def list_ideas(
+        self,
+        session: Session,
+        *,
+        sort_by: str = "score",
+        order: str = "desc",
+        topic: str | None = None,
+        source: str | None = None,
+        search: str | None = None,
+        include_archived: bool = False,
+    ) -> list[dict]:
         ideas = session.exec(select(Idea).order_by(Idea.created_at.desc())).all()
         cards = [self._build_card(session, idea) for idea in ideas]
-        return sorted(cards, key=lambda item: item["score"], reverse=True)
+
+        if not include_archived:
+            cards = [card for card in cards if card["status"] == "active"]
+        else:
+            cards = [card for card in cards if card["status"] != "rejected"]
+
+        if topic:
+            topic_lower = topic.lower()
+            cards = [card for card in cards if topic_lower in (card["niche"] or "").lower()]
+        if source:
+            source_lower = source.lower()
+            cards = [card for card in cards if source_lower in (card["source"] or "").lower()]
+        if search:
+            query = search.lower()
+            cards = [
+                card
+                for card in cards
+                if query in " ".join(
+                    [
+                        str(card.get("title") or ""),
+                        str(card.get("summary") or ""),
+                        str(card.get("problem") or ""),
+                        str(card.get("audience") or ""),
+                        str(card.get("source_title") or ""),
+                        str(card.get("source_quote") or ""),
+                    ]
+                ).lower()
+            ]
+
+        reverse = order != "asc"
+        if sort_by == "date":
+            cards = sorted(cards, key=lambda item: item["created_at"] or "", reverse=reverse)
+        else:
+            cards = sorted(cards, key=lambda item: item["score"], reverse=reverse)
+        return cards
 
     def discover_ideas(self, session: Session) -> list[dict]:
         result = self.orchestration.discover_and_persist(session, trigger_type="manual", requested_by="dashboard")
         return [self._build_card(session, session.get(Idea, item["id"])) for item in result["ideas"]]
 
-    def get_idea(self, session: Session, idea_id: int) -> IdeaDetail | None:
+    def set_status(self, session: Session, idea_id: int, status: str) -> dict | None:
         idea = session.get(Idea, idea_id)
         if not idea:
+            return None
+        idea.status = status
+        idea.updated_at = datetime.utcnow().isoformat()
+        session.add(idea)
+        session.commit()
+        session.refresh(idea)
+        return {"id": idea.id, "status": idea.status}
+
+    def get_idea(self, session: Session, idea_id: int) -> IdeaDetail | None:
+        idea = session.get(Idea, idea_id)
+        if not idea or idea.status == "rejected":
             return None
 
         score_record = self._latest_score(session, idea.id)
@@ -111,17 +189,18 @@ class IdeaController:
             select(Report).where(Report.idea_id == idea.id).order_by(Report.created_at.desc())
         ).first()
         report_path, report_content = self._ensure_report(session, idea, report)
-        problem = self._build_problem_text(session, idea)
+        source_payload = self._source_payload(session, idea)
 
         return IdeaDetail(
             id=idea.id,
             title=idea.title,
             summary=idea.summary,
-            problem=problem,
+            problem=source_payload["problem"],
             audience=idea.target_audience or "Solo founders, indie developers",
             features=[
                 "Сбор обсуждений",
                 "Извлечение проблем",
+                "Opportunity analysis",
                 "Оценка идеи",
             ],
             tech_stack=["FastAPI", "React", "SQLite"],
@@ -132,6 +211,12 @@ class IdeaController:
                 monetization=int(score_record.monetization_score if score_record else 0),
                 total=score_record.total_score if score_record else 0.0,
             ),
+            source=self._source_label(session, idea),
+            source_url=source_payload["source_url"],
+            source_title=source_payload["source_title"],
+            source_quote=source_payload["source_quote"],
+            cluster_id=idea.cluster_id,
+            opportunity_score=idea.opportunity_score,
             report_path=report_path,
             report_content=report_content,
         )

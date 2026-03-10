@@ -18,6 +18,11 @@ class IdeaGeneratorAgent:
                     "audience": response["audience"],
                     "niche": cluster["niche"],
                     "source": cluster["source"],
+                    "source_url": cluster.get("url"),
+                    "source_title": cluster.get("thread_title"),
+                    "source_quote": cluster.get("quote"),
+                    "cluster_db_id": cluster.get("cluster_db_id"),
+                    "opportunity_score": cluster.get("opportunity_score"),
                 }
             )
         return ideas

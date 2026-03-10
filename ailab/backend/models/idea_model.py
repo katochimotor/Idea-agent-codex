@@ -25,6 +25,7 @@ class Idea(SQLModel, table=True):
     summary: str
     target_audience: str | None = None
     niche_label: str | None = None
+    opportunity_score: float | None = None
     source_type: str
     generation_run_id: int | None = Field(default=None, foreign_key="pipeline_runs.id")
     status: str = Field(default="active")
@@ -99,5 +100,11 @@ class IdeaDetail(BaseModel):
     features: list[str]
     tech_stack: list[str]
     score: IdeaScore
+    source: Optional[str] = None
+    source_url: Optional[str] = None
+    source_title: Optional[str] = None
+    source_quote: Optional[str] = None
+    cluster_id: Optional[int] = None
+    opportunity_score: Optional[float] = None
     report_path: Optional[str] = None
     report_content: Optional[str] = None

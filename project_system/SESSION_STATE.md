@@ -15,14 +15,51 @@
 ### Pipeline orchestration
 
 - `PipelineOrchestrationService` is the central runtime service.
-- It creates `pipeline_runs`, resolves model registry entries, executes idea discovery, deduplicates ideas, writes reports, and rebuilds the document chunk vector index.
-- Discovery persistence currently writes:
+- Current discovery flow:
+  - collect discussions
+  - extract problems
+  - cluster problems
+  - opportunity analysis
+  - generate ideas
+  - score ideas
+  - save results
+- Discovery persistence now writes:
   - `sources`
   - `documents`
+  - `problems`
+  - `problem_clusters`
+  - `problem_cluster_memberships`
+  - `opportunities`
   - `ideas`
   - `idea_scores`
   - `reports`
-- Problem extraction and clustering are not yet persisted into `problems` / `problem_clusters`; those parts are still in-memory scaffolds.
+  - `idea_evidence`
+- Job feedback now includes:
+  - `documents_scanned`
+  - `problems_extracted`
+  - `clusters_detected`
+  - `clusters_analyzed`
+  - `opportunities_discovered`
+  - `top_opportunity_score`
+  - `ideas_generated`
+  - `duplicates_skipped`
+  - `linked_existing_ideas`
+  - `ideas_added_to_database`
+
+### Opportunity engine
+
+- Implemented in `backend/services/opportunity_engine.py`.
+- Runs after clustering and before idea generation.
+- Calculates and stores:
+  - `pain_score`
+  - `frequency_score`
+  - `solution_gap_score`
+  - `market_score`
+  - `build_complexity_score`
+  - `opportunity_score`
+- Exposes API:
+  - `GET /api/opportunities`
+  - `GET /api/opportunities/{cluster_id}`
 
 ### Vector search
 
@@ -40,23 +77,19 @@
 
 - Source documents are stored in `documents`.
 - Text chunks are stored in `document_chunks`.
-- Fingerprint table exists in schema, but current orchestration primarily relies on `SemanticDeduplicationEngine` and content hashes.
-- Raw payload paths and normalized payload paths are schema-ready but not fully used by the current stub connectors.
-
-### Frontend polling
-
-- Dashboard starts discovery through the async jobs API.
-- Polling interval is 1500 ms with a default timeout of 45 seconds.
-- After job completion the dashboard reloads the idea list.
-- API clients now use same-origin `/api`, which matches desktop/static serving mode.
+- Extracted problems are stored in `problems`.
+- Cluster structure is stored in `problem_clusters` and `problem_cluster_memberships`.
+- Opportunity signals are stored in `opportunities`.
 
 ### Frontend MVP state
 
-- Dashboard is connected to live backend data and no longer uses static placeholder cards.
-- Idea cards render real `title`, `summary`, `score`, `source`, `tags`, and `created_at` values from SQLite-backed API responses.
-- The progress panel renders live `job_events`, current pipeline stage, failure messages, and loading states.
-- The projects page loads real projects from the database.
-- The idea detail page now guarantees a report preview by regenerating a markdown report file if the DB path exists but the file is missing.
+- Dashboard is connected to live backend data.
+- `Latest Pipeline Results` uses real results from the latest discovery run.
+- `Startup Opportunities` uses `/api/opportunities`.
+- `PipelineRunPanel` shows stage progress, metrics, and advanced logs.
+- Idea cards render source traceability, source links, cluster links, and opportunity score.
+- Idea detail page renders report preview and source evidence.
+- Opportunity detail page is implemented and linked from dashboard/cards.
 - A light/dark theme toggle exists in Settings and is persisted in `localStorage`.
 
 ### Provider configuration
@@ -69,41 +102,40 @@
   - loading saved provider state
   - testing provider connectivity
   - saving active provider configuration
-- Provider API clients now handle non-JSON backend failures more safely in the UI.
+- Offline/local verification is still possible because `LLMClient` has a deterministic fallback path when no external provider is configured.
 
 ### Launcher
 
-- Converted to desktop mode.
-- Launcher now starts only FastAPI in production mode.
-- The frontend is expected to be prebuilt into `ailab/frontend/dist`.
-- FastAPI serves the built SPA directly.
-- Launcher opens `pywebview` instead of the system browser.
+- Desktop runtime is stable:
+  - `start_app.bat` -> launcher -> FastAPI -> built React SPA -> `pywebview`
+- Launcher starts FastAPI in production mode and opens `pywebview`.
 - When the desktop window closes, the launcher terminates the backend process it started.
 
 ### Repository workflow
 
-- `project_system` is now the persistent project memory layer for future sessions.
+- `project_system` is the persistent memory layer for future Codex sessions.
 - `reconstruct_context.py` is the quick context rebuild entrypoint.
-- `scripts/dev_commit_push.bat` and `scripts/dev_commit_push.ps1` automate add/commit/push.
-- `scripts/dev_snapshot.bat` captures a project-context snapshot and pushes it.
-- Root-level `SESSION_REPORT.md` is the short human-readable summary of the latest completed work.
+- `SESSION_REPORT.md` is the short human-readable summary of the latest completed work.
+- `.gitignore` now excludes generated `ailab/projects/` runtime folders so test project artifacts do not pollute future commits.
 
 ## Latest Verified State
 
 - `npm run build` passes for the frontend.
-- Python `compileall` passes for backend, launcher, and `project_system`.
+- Python `compileall` passes for backend.
 - End-to-end smoke testing was run against a live local FastAPI process:
-  - dashboard endpoints responded
-  - provider test/save endpoints responded
   - discovery job completed successfully
-  - `job_events` were returned with stage messages
-  - idea reports existed on disk and were readable
-  - project creation endpoint wrote a DB record and project folder
+  - `opportunities` table exists
+  - `ideas.opportunity_score` exists
+  - `/api/opportunities` returned top opportunities
+  - `/api/dashboard` returned top opportunities and latest results
+  - all ideas received `cluster_id`
+  - all ideas received `opportunity_score`
+  - opportunity detail returned `related_ideas`
 
 ## Known Gaps
 
 - No separate worker process; worker is still in-process.
 - Source connectors and parts of research generation are still placeholders.
 - No websocket or server-sent event progress streaming.
-- No persisted problem/cluster lineage yet.
-- Search currently covers only `document_chunks`.
+- Search still focuses on `document_chunks`; opportunity/problem/idea search can be expanded later.
+- Opportunity detail exists, but a dedicated cluster detail workflow is not yet implemented.

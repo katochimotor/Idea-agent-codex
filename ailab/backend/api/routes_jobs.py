@@ -40,11 +40,13 @@ def get_job(job_id: int, session: Session = Depends(get_session)):
     job = job_service.get_job(session, job_id)
     if not job:
         raise HTTPException(status_code=404, detail="Job not found")
+    result = json.loads(job.result_json) if job.result_json else None
     return {
         "id": job.id,
         "job_type": job.job_type,
         "status": job.status,
-        "result": json.loads(job.result_json) if job.result_json else None,
+        "result": result,
+        "pipeline_metrics": result.get("pipeline_metrics") if result else None,
         "error_message": job.error_message,
         "created_at": job.created_at,
         "started_at": job.started_at,

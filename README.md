@@ -26,6 +26,18 @@
 4. Если папки `dist` нет, откройте терминал в `ailab\frontend` и выполните `npm run build`.
 5. После этого снова запустите `start_app.bat`.
 
+## Если продолжаете разработку с Codex
+
+Открывайте по порядку:
+
+1. `README.md`
+2. `SESSION_REPORT.md`
+3. `project_system\RESUME_CODEX_PROMPT.md`
+
+Короткая фраза для новой сессии Codex:
+
+`Продолжаем AI Idea Research Lab с текущего SESSION_REPORT. Сначала прочитай README.md, SESSION_REPORT.md и всё в project_system, затем запусти reconstruct_context.py, проверь git status и продолжи с opportunity engine / dashboard UX с места остановки.`
+
 ## Что делает проект
 
 Проект запускает локальное desktop-приложение:
@@ -36,6 +48,14 @@
 - `pywebview` открывает всё это как отдельное окно приложения.
 
 То есть проект больше не зависит от Vite dev server и не требует ручного открытия браузера для обычного запуска.
+
+Сейчас проект уже умеет:
+
+- запускать desktop UI через `pywebview`
+- поднимать FastAPI backend и React SPA
+- выполнять pipeline discovery jobs
+- сохранять `problems`, `problem_clusters`, `opportunities`, `ideas`
+- показывать pipeline progress и `Startup Opportunities` на dashboard
 
 ## Главные файлы в корне проекта
 

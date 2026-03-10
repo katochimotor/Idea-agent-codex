@@ -33,9 +33,10 @@ The product flow is:
    - collect discussion samples
    - extract normalized problems
    - cluster them
+   - analyze opportunities
    - generate idea candidates
    - score ideas
-   - persist ideas, reports, and source documents
+   - persist problems, clusters, opportunities, ideas, reports, and source documents
    - rebuild the local vector index
 4. The frontend polls job status and refreshes the idea list after completion.
 

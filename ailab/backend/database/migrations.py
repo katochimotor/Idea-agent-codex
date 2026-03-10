@@ -26,6 +26,11 @@ def _table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
     return row is not None
 
 
+def _column_exists(connection: sqlite3.Connection, table_name: str, column_name: str) -> bool:
+    rows = connection.execute(f"PRAGMA table_info({table_name})").fetchall()
+    return any(row["name"] == column_name for row in rows)
+
+
 def _migrate_provider_settings_table(connection: sqlite3.Connection) -> None:
     if not _table_exists(connection, "provider_settings"):
         return
@@ -68,6 +73,36 @@ def _migrate_provider_settings_table(connection: sqlite3.Connection) -> None:
     connection.execute("ALTER TABLE provider_settings_new RENAME TO provider_settings")
     connection.execute(
         "CREATE INDEX IF NOT EXISTS idx_provider_settings_active ON provider_settings(is_active, updated_at DESC)"
+    )
+
+
+def _ensure_ideas_opportunity_score_column(connection: sqlite3.Connection) -> None:
+    if _table_exists(connection, "ideas") and not _column_exists(connection, "ideas", "opportunity_score"):
+        connection.execute("ALTER TABLE ideas ADD COLUMN opportunity_score REAL")
+
+
+def _ensure_opportunities_table(connection: sqlite3.Connection) -> None:
+    if not _table_exists(connection, "opportunities"):
+        connection.execute(
+            """
+            CREATE TABLE opportunities (
+                id INTEGER PRIMARY KEY,
+                cluster_id INTEGER NOT NULL,
+                title TEXT NOT NULL,
+                description TEXT NOT NULL,
+                pain_score REAL NOT NULL,
+                frequency_score REAL NOT NULL,
+                solution_gap_score REAL NOT NULL,
+                market_score REAL NOT NULL,
+                build_complexity_score REAL NOT NULL,
+                opportunity_score REAL NOT NULL,
+                created_at TEXT NOT NULL,
+                FOREIGN KEY (cluster_id) REFERENCES problem_clusters(id) ON DELETE CASCADE
+            )
+            """
+        )
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_opportunities_score ON opportunities(opportunity_score DESC, created_at DESC)"
     )
 
 
@@ -155,6 +190,8 @@ def migrate_legacy_schema() -> None:
     with _connect() as connection:
         now = datetime.utcnow().isoformat()
         _migrate_provider_settings_table(connection)
+        _ensure_ideas_opportunity_score_column(connection)
+        _ensure_opportunities_table(connection)
 
         if _table_exists(connection, "idea"):
             legacy_ideas = connection.execute("SELECT * FROM idea ORDER BY id").fetchall()

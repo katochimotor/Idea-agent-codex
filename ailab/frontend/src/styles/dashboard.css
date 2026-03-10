@@ -5,6 +5,13 @@
   gap: 20px;
 }
 
+.pipeline-panel,
+.opportunity-card,
+.idea-card-rich {
+  position: relative;
+  overflow: hidden;
+}
+
 .hero-panel {
   display: flex;
   justify-content: space-between;
@@ -37,6 +44,32 @@
   display: flex;
   flex-direction: column;
   gap: 14px;
+}
+
+.idea-card-rich {
+  min-height: 100%;
+}
+
+.idea-card-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.idea-evidence {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface-muted);
+}
+
+.idea-quote {
+  margin: 0;
+  padding-left: 14px;
+  border-left: 3px solid color-mix(in srgb, var(--accent) 58%, transparent 42%);
+  color: var(--text);
 }
 
 .idea-card-header,
@@ -121,6 +154,69 @@
   transition: width 180ms ease;
 }
 
+.pipeline-stage-row,
+.opportunity-meta {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.pipeline-metrics-grid,
+.opportunity-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.metric-tile {
+  padding: 14px;
+  border-radius: 18px;
+  background: var(--surface-muted);
+  border: 1px solid rgba(16, 32, 51, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.metric-tile span {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.metric-tile strong {
+  font-size: 24px;
+}
+
+.pipeline-log-panel {
+  margin-top: 18px;
+  border-top: 1px solid rgba(16, 32, 51, 0.08);
+  padding-top: 14px;
+}
+
+.pipeline-log-panel summary {
+  cursor: pointer;
+  color: var(--panel-strong);
+}
+
+.opportunity-card {
+  border: 1px solid rgba(16, 32, 51, 0.08);
+  border-radius: 22px;
+  background: var(--panel);
+  box-shadow: 0 10px 40px rgba(16, 32, 51, 0.06);
+  padding: 18px;
+  text-align: left;
+  color: var(--text);
+  transition: transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease;
+}
+
+.opportunity-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 44px rgba(16, 32, 51, 0.12);
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent 70%);
+}
+
 .job-events {
   display: flex;
   flex-direction: column;
@@ -189,5 +285,10 @@
 
   .job-event-row {
     grid-template-columns: 1fr;
+  }
+
+  .pipeline-stage-row,
+  .opportunity-meta {
+    align-items: flex-start;
   }
 }

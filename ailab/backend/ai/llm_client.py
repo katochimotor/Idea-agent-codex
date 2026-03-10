@@ -14,11 +14,53 @@ class LLMClient:
     def __init__(self) -> None:
         self.provider_settings = ProviderSettingsService()
 
-    def _fallback_response(self) -> dict:
+    def _extract_prompt_context(self, prompt: str) -> tuple[str, str]:
+        match = re.search(r"problem '(.+?)' in niche '(.+?)'\.?$", prompt)
+        if not match:
+            return "", ""
+        return match.group(1).strip(), match.group(2).strip()
+
+    def _fallback_response(self, prompt: str) -> dict:
+        problem, niche = self._extract_prompt_context(prompt)
+        normalized_problem = problem.lower()
+        normalized_niche = niche.lower()
+
+        if "prompt" in normalized_problem or "промпт" in normalized_problem:
+            return {
+                "title": "Библиотека промптов для команд",
+                "summary": "Локальный сервис для хранения, поиска и оценки промптов внутри команды.",
+                "audience": "Команды, которые регулярно работают с AI-инструментами",
+            }
+
+        if "support" in normalized_problem or "саппорт" in normalized_problem or "pain point" in normalized_problem:
+            return {
+                "title": "Трекер боли для саппорт-команд",
+                "summary": "Инструмент, который группирует жалобы пользователей и выделяет повторяющиеся проблемы.",
+                "audience": "Support leads, customer success managers и founders",
+            }
+
+        if (
+            "feature request" in normalized_problem
+            or "feedback" in normalized_problem
+            or "research" in normalized_niche
+            or "founder" in normalized_problem
+        ):
+            return {
+                "title": "Автоматический исследователь пользовательских болей",
+                "summary": "Сервис собирает обсуждения, выделяет боли и формирует готовые идеи продуктов.",
+                "audience": "Indie hackers и product managers",
+            }
+
+        problem_fragment = re.sub(r"[^A-Za-zА-Яа-я0-9\\s-]", "", problem).strip()
+        problem_fragment = " ".join(problem_fragment.split()[:5]).strip()
+        if not problem_fragment:
+            problem_fragment = "пользовательских проблем"
+
+        niche_label = niche.strip() or "digital products"
         return {
-            "title": "Автоматический исследователь пользовательских болей",
-            "summary": "Сервис собирает обсуждения, выделяет боли и формирует готовые идеи продуктов.",
-            "audience": "Indie hackers и product managers",
+            "title": f"Платформа для {problem_fragment.lower()}",
+            "summary": f"Сервис для ниши {niche_label}, который помогает системно решать проблему: {problem or 'неструктурированные пользовательские боли'}.",
+            "audience": f"Команды и founders в нише {niche_label}",
         }
 
     def _json_instruction(self, prompt: str) -> str:
@@ -99,7 +141,7 @@ class LLMClient:
             config = self.provider_settings.get_active_provider_config(session)
 
         if not config:
-            return self._fallback_response()
+            return self._fallback_response(prompt)
 
         try:
             if config.provider == "openai":
@@ -112,4 +154,4 @@ class LLMClient:
         except httpx.HTTPError as exc:
             raise RuntimeError(f"{config.provider} generation failed: {exc}") from exc
 
-        return self._fallback_response()
+        return self._fallback_response(prompt)

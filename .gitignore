@@ -8,3 +8,4 @@ __pycache__
 data/vector_index
 .env
 ailab/data/.secret.key
+ailab/projects/
