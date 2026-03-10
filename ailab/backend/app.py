@@ -9,6 +9,7 @@ from backend.api.routes_ideas import router as ideas_router
 from backend.api.routes_jobs import router as jobs_router
 from backend.api.routes_projects import router as projects_router
 from backend.api.routes_search import router as search_router
+from backend.api.routes_settings import router as settings_router
 from backend.api.routes_sources import router as sources_router
 from backend.database.db import engine, init_db
 from backend.database.seed_data import seed_ideas
@@ -61,6 +62,7 @@ def create_app() -> FastAPI:
     app.include_router(projects_router, prefix=settings.api_prefix)
     app.include_router(dashboard_router, prefix=settings.api_prefix)
     app.include_router(search_router, prefix=settings.api_prefix)
+    app.include_router(settings_router, prefix=settings.api_prefix)
     app.include_router(sources_router, prefix=settings.api_prefix)
 
     @app.on_event("startup")

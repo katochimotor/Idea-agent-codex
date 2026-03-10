@@ -19,7 +19,7 @@
 .stats-row,
 .dashboard-bottom {
   display: grid;
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 16px;
 }
 
@@ -65,14 +65,14 @@
 
 .tag,
 .idea-score {
-  background: #edf2f7;
-  color: var(--panel-strong);
+  background: var(--badge-strong-bg);
+  color: var(--badge-strong-text);
 }
 
 .soft-tag,
 .trend-pill {
-  background: #fff1df;
-  color: #9a4a05;
+  background: var(--badge-soft-bg);
+  color: var(--badge-soft-text);
 }
 
 .mindmap {
@@ -85,8 +85,97 @@
 
 .mindmap-node {
   min-height: 52px;
-  background: #eff6ff;
-  color: #174ea6;
+  background: color-mix(in srgb, var(--panel) 70%, #5a8fd8 30%);
+  color: var(--text);
+}
+
+.report-preview {
+  margin: 14px 0 0;
+  padding: 14px;
+  border-radius: 18px;
+  border: 1px solid rgba(16, 32, 51, 0.08);
+  background: var(--surface-muted);
+  color: var(--text);
+  white-space: pre-wrap;
+  word-break: break-word;
+  overflow-x: auto;
+}
+
+.panel-subtitle {
+  margin: 6px 0 0;
+  color: var(--muted);
+}
+
+.job-progress-bar {
+  width: 100%;
+  height: 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--panel) 65%, #cbd5e1 35%);
+  overflow: hidden;
+  margin: 18px 0;
+}
+
+.job-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, #ef7f1a 0%, #f2a65c 100%);
+  transition: width 180ms ease;
+}
+
+.job-events {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.job-event-row {
+  display: grid;
+  grid-template-columns: 140px 1fr auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 0;
+  border-top: 1px solid rgba(16, 32, 51, 0.08);
+}
+
+.job-event-time {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.idea-created-at {
+  color: var(--muted);
+}
+
+.job-error {
+  color: var(--danger);
+  margin: 0 0 14px;
+}
+
+.score-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 12px;
+}
+
+.score-metric {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 14px;
+  border: 1px solid rgba(16, 32, 51, 0.08);
+  border-radius: 18px;
+  background: var(--surface-muted);
+}
+
+.score-metric span {
+  color: var(--muted);
+}
+
+.score-metric strong {
+  font-size: 22px;
+}
+
+.score-metric-total {
+  background: var(--surface-emphasis);
 }
 
 @media (max-width: 900px) {
@@ -96,5 +185,9 @@
     grid-template-columns: 1fr;
     flex-direction: column;
     align-items: flex-start;
+  }
+
+  .job-event-row {
+    grid-template-columns: 1fr;
   }
 }

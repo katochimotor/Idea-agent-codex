@@ -172,6 +172,20 @@ CREATE TABLE IF NOT EXISTS prompt_versions (
     UNIQUE (prompt_key, version_label)
 );
 
+CREATE TABLE IF NOT EXISTS provider_settings (
+    id INTEGER PRIMARY KEY,
+    provider TEXT NOT NULL UNIQUE CHECK (provider IN ('codex_cli', 'openai', 'anthropic')),
+    model_name TEXT NOT NULL,
+    api_key_encrypted TEXT,
+    is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+    last_tested_at TEXT,
+    created_at TEXT NOT NULL,
+    updated_at TEXT NOT NULL
+);
+
+CREATE INDEX IF NOT EXISTS idx_provider_settings_active
+    ON provider_settings(is_active, updated_at DESC);
+
 CREATE TABLE IF NOT EXISTS pipeline_runs (
     id INTEGER PRIMARY KEY,
     run_type TEXT NOT NULL,

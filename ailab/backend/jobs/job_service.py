@@ -47,6 +47,7 @@ class JobService:
                 "event_type": event.event_type,
                 "status": event.status,
                 "message": event.message,
+                "payload": json.loads(event.payload_json) if event.payload_json else None,
                 "created_at": event.created_at,
             }
             for event in events

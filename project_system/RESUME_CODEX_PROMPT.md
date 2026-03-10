@@ -6,6 +6,8 @@ Use this prompt at the start of a new Codex session for this repository:
 You are resuming work on this repository.
 
 First:
+- read `README.md`
+- read `SESSION_REPORT.md`
 - read every file in `/project_system`
 - run `ailab\.venv\Scripts\python.exe project_system\reconstruct_context.py`
 - check `git status`
@@ -25,6 +27,7 @@ Before editing:
 - identify the current entry points
 - confirm how startup, job execution, search, and frontend polling currently work
 - confirm the current repository state from `git status`
+- confirm the latest completed work from `SESSION_REPORT.md`
 - check whether the requested task affects runtime, persistence, or packaging
 
 When done:

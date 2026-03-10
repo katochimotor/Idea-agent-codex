@@ -28,4 +28,5 @@ def idea_to_card(
         "difficulty": difficulty,
         "monetization": monetization,
         "tags": tags or _default_tags(idea),
+        "created_at": idea.created_at,
     }

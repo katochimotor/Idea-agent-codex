@@ -50,6 +50,27 @@
 - After job completion the dashboard reloads the idea list.
 - API clients now use same-origin `/api`, which matches desktop/static serving mode.
 
+### Frontend MVP state
+
+- Dashboard is connected to live backend data and no longer uses static placeholder cards.
+- Idea cards render real `title`, `summary`, `score`, `source`, `tags`, and `created_at` values from SQLite-backed API responses.
+- The progress panel renders live `job_events`, current pipeline stage, failure messages, and loading states.
+- The projects page loads real projects from the database.
+- The idea detail page now guarantees a report preview by regenerating a markdown report file if the DB path exists but the file is missing.
+- A light/dark theme toggle exists in Settings and is persisted in `localStorage`.
+
+### Provider configuration
+
+- Default provider is `codex_cli`.
+- Optional providers remain:
+  - `openai`
+  - `anthropic`
+- Settings page supports:
+  - loading saved provider state
+  - testing provider connectivity
+  - saving active provider configuration
+- Provider API clients now handle non-JSON backend failures more safely in the UI.
+
 ### Launcher
 
 - Converted to desktop mode.
@@ -65,11 +86,24 @@
 - `reconstruct_context.py` is the quick context rebuild entrypoint.
 - `scripts/dev_commit_push.bat` and `scripts/dev_commit_push.ps1` automate add/commit/push.
 - `scripts/dev_snapshot.bat` captures a project-context snapshot and pushes it.
+- Root-level `SESSION_REPORT.md` is the short human-readable summary of the latest completed work.
+
+## Latest Verified State
+
+- `npm run build` passes for the frontend.
+- Python `compileall` passes for backend, launcher, and `project_system`.
+- End-to-end smoke testing was run against a live local FastAPI process:
+  - dashboard endpoints responded
+  - provider test/save endpoints responded
+  - discovery job completed successfully
+  - `job_events` were returned with stage messages
+  - idea reports existed on disk and were readable
+  - project creation endpoint wrote a DB record and project folder
 
 ## Known Gaps
 
 - No separate worker process; worker is still in-process.
-- Source connectors and LLM generation are placeholders.
+- Source connectors and parts of research generation are still placeholders.
 - No websocket or server-sent event progress streaming.
 - No persisted problem/cluster lineage yet.
 - Search currently covers only `document_chunks`.

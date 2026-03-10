@@ -4,7 +4,6 @@ import json
 from datetime import datetime
 
 from sqlmodel import Session, select
-
 from backend.agents.report_agent import ReportAgent
 from backend.ingestion.semantic_deduper import SemanticDeduplicationEngine
 from backend.models.document_model import Document
@@ -13,6 +12,7 @@ from backend.models.job_model import Job
 from backend.models.model_registry_model import ModelRegistryEntry
 from backend.models.run_model import PipelineRun
 from backend.models.source_model import Source
+from backend.jobs.job_repository import JobRepository
 from backend.pipelines.idea_pipeline import IdeaPipeline
 from backend.search.retriever import VectorSearchService
 from backend.settings import settings
@@ -25,6 +25,7 @@ class PipelineOrchestrationService:
         self.report_agent = ReportAgent()
         self.deduper = SemanticDeduplicationEngine()
         self.vector_search = VectorSearchService()
+        self.job_repository = JobRepository()
 
     def _now(self) -> str:
         return datetime.utcnow().isoformat()
@@ -86,6 +87,29 @@ class PipelineOrchestrationService:
         session.flush()
         return source
 
+    def _emit_job_event(
+        self,
+        session: Session,
+        job_id: int | None,
+        *,
+        event_type: str,
+        stage: str,
+        stage_label: str,
+        message: str,
+        status: str = "running",
+    ) -> None:
+        if not job_id:
+            return
+        self.job_repository.add_event(
+            session,
+            job_id,
+            event_type,
+            status,
+            message,
+            payload_json=json.dumps({"stage": stage, "stage_label": stage_label}, ensure_ascii=False),
+        )
+        session.commit()
+
     def discover_and_persist(
         self,
         session: Session,
@@ -103,10 +127,28 @@ class PipelineOrchestrationService:
             input_summary={"requested_by": requested_by},
         )
         try:
-            generated = self.pipeline.run()
+            generated = self.pipeline.run(
+                stage_callback=lambda stage, stage_label, message: self._emit_job_event(
+                    session,
+                    job_id,
+                    event_type=f"pipeline_{stage}",
+                    stage=stage,
+                    stage_label=stage_label,
+                    message=message,
+                )
+            )
             existing_ideas = session.exec(select(Idea)).all()
             persisted: list[dict] = []
             now = self._now()
+
+            self._emit_job_event(
+                session,
+                job_id,
+                event_type="pipeline_save_results",
+                stage="save_results",
+                stage_label="Saving results",
+                message="Сохраняем результаты pipeline в базу данных.",
+            )
 
             for item in generated:
                 candidate_text = f"{item['title']}\n{item['summary']}"
@@ -186,6 +228,14 @@ class PipelineOrchestrationService:
                 persisted.append({"id": idea.id, "title": idea.title, "summary": idea.summary, "score": item["score"]})
                 existing_ideas.append(idea)
 
+            self._emit_job_event(
+                session,
+                job_id,
+                event_type="pipeline_rebuild_vectors",
+                stage="save_results",
+                stage_label="Saving results",
+                message="Обновляем векторный индекс и артефакты поиска.",
+            )
             index_result = self.vector_search.rebuild_document_chunk_index(session, pipeline_run=run)
             run.status = "completed"
             run.finished_at = self._now()

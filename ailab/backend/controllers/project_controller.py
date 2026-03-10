@@ -1,6 +1,6 @@
 from datetime import datetime
 
-from sqlmodel import Session
+from sqlmodel import Session, select
 
 from backend.models.project_model import Project, ProjectFile
 from backend.settings import settings
@@ -9,6 +9,20 @@ from backend.utils.slug_generator import slugify
 
 
 class ProjectController:
+    def list_projects(self, session: Session) -> list[dict]:
+        projects = session.exec(select(Project).order_by(Project.created_at.desc())).all()
+        return [
+            {
+                "id": project.id,
+                "idea_id": project.idea_id,
+                "title": project.title,
+                "folder_path": project.folder_path,
+                "status": project.status,
+                "created_at": project.created_at,
+            }
+            for project in projects
+        ]
+
     def create_project(self, session: Session, idea_id: int, title: str) -> dict:
         now = datetime.utcnow().isoformat()
         folder_name = slugify(title)
@@ -53,4 +67,10 @@ class ProjectController:
         session.commit()
         session.refresh(project)
 
-        return {"id": project.id, "idea_id": idea_id, "folder_path": str(project_dir)}
+        return {
+            "id": project.id,
+            "idea_id": idea_id,
+            "title": title,
+            "folder_path": str(project_dir),
+            "created_at": project.created_at,
+        }

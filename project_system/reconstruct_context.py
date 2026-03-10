@@ -55,6 +55,17 @@ def main() -> None:
         status = "present" if entry.exists() else "missing"
         print(f"- {entry.relative_to(ROOT).as_posix()} [{status}]")
 
+    print_section("Human Docs")
+    docs = [
+        ROOT / "README.md",
+        ROOT / "SESSION_REPORT.md",
+        ROOT / "project_system" / "PROJECT_CONTEXT.md",
+        ROOT / "project_system" / "SESSION_STATE.md",
+    ]
+    for doc in docs:
+        status = "present" if doc.exists() else "missing"
+        print(f"- {doc.relative_to(ROOT).as_posix()} [{status}]")
+
     print_section("Important Modules")
     groups = {
         "Backend API": list_files(APP_ROOT / "backend" / "api"),
@@ -81,7 +92,8 @@ def main() -> None:
     print("- BackgroundJobWorker polls queued jobs and executes them through PipelineOrchestrationService")
     print("- VectorSearchService chunks documents, builds embeddings, writes JSON vector files, and serves search results")
     print("Frontend behavior:")
-    print("- Dashboard enqueues discovery jobs, polls for completion, and reloads ideas")
+    print("- Dashboard loads real ideas, analytics, and pipeline progress from the live backend")
+    print("- Settings manage provider selection and the light/dark theme")
     print("- API clients use same-origin /api requests for desktop/static mode")
 
 

@@ -100,3 +100,4 @@ class IdeaDetail(BaseModel):
     tech_stack: list[str]
     score: IdeaScore
     report_path: Optional[str] = None
+    report_content: Optional[str] = None

@@ -8,6 +8,15 @@ The repository has three main runtime layers:
 - `ailab/frontend`: React single-page application used as the product UI.
 - `ailab/launcher`: production launcher that starts FastAPI locally and opens the UI in a `pywebview` desktop window.
 
+The product is no longer a mock dashboard. The current frontend is wired to the live backend and SQLite state:
+
+- the dashboard loads real ideas and analytics from `/api`
+- discovery runs through the async jobs system
+- job progress is shown from `job_events`
+- idea detail pages show a real markdown report preview
+- project creation writes starter project folders and DB records
+- settings switch the active LLM provider and UI theme
+
 The current runtime model is desktop-first:
 
 1. `start_app.bat` or `start.bat` checks the virtual environment and starts `ailab/launcher/launcher.py`.
@@ -34,7 +43,8 @@ The implementation is intentionally local and deterministic:
 
 - SQLite stores metadata and lineage.
 - Vector metadata is stored in SQLite, while vectors are written to local JSON files under `data/vector_index`.
-- Current source connectors, idea generation, and scoring are scaffolded with placeholder/local implementations.
+- The provider layer supports `codex_cli` as the default local provider, with optional `openai` and `anthropic` configurations.
+- Current source connectors and some research/generation stages are still scaffolded with placeholder/local implementations.
 - The worker is a single daemon thread inside the FastAPI process.
 
 This repository now also contains `project_system/`, which is the persistent memory layer for future Codex sessions.

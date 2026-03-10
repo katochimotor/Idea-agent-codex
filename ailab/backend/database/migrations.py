@@ -26,6 +26,51 @@ def _table_exists(connection: sqlite3.Connection, table_name: str) -> bool:
     return row is not None
 
 
+def _migrate_provider_settings_table(connection: sqlite3.Connection) -> None:
+    if not _table_exists(connection, "provider_settings"):
+        return
+
+    create_sql = connection.execute(
+        "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'provider_settings'"
+    ).fetchone()
+    if create_sql is None:
+        return
+
+    sql_text = create_sql["sql"] or ""
+    requires_rebuild = "codex_cli" not in sql_text or "api_key_encrypted TEXT NOT NULL" in sql_text
+    if not requires_rebuild:
+        return
+
+    connection.execute(
+        """
+        CREATE TABLE provider_settings_new (
+            id INTEGER PRIMARY KEY,
+            provider TEXT NOT NULL UNIQUE CHECK (provider IN ('codex_cli', 'openai', 'anthropic')),
+            model_name TEXT NOT NULL,
+            api_key_encrypted TEXT,
+            is_active INTEGER NOT NULL DEFAULT 0 CHECK (is_active IN (0, 1)),
+            last_tested_at TEXT,
+            created_at TEXT NOT NULL,
+            updated_at TEXT NOT NULL
+        )
+        """
+    )
+    connection.execute(
+        """
+        INSERT INTO provider_settings_new (
+            id, provider, model_name, api_key_encrypted, is_active, last_tested_at, created_at, updated_at
+        )
+        SELECT id, provider, model_name, api_key_encrypted, is_active, last_tested_at, created_at, updated_at
+        FROM provider_settings
+        """
+    )
+    connection.execute("DROP TABLE provider_settings")
+    connection.execute("ALTER TABLE provider_settings_new RENAME TO provider_settings")
+    connection.execute(
+        "CREATE INDEX IF NOT EXISTS idx_provider_settings_active ON provider_settings(is_active, updated_at DESC)"
+    )
+
+
 def apply_sqlite_schema() -> None:
     with _connect() as connection:
         connection.executescript(SCHEMA_PATH.read_text(encoding="utf-8"))
@@ -109,6 +154,7 @@ def _ensure_legacy_document(
 def migrate_legacy_schema() -> None:
     with _connect() as connection:
         now = datetime.utcnow().isoformat()
+        _migrate_provider_settings_table(connection)
 
         if _table_exists(connection, "idea"):
             legacy_ideas = connection.execute("SELECT * FROM idea ORDER BY id").fetchall()

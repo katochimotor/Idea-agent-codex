@@ -1,7 +1,7 @@
-export default function GenerateButton({ onClick, loading = false }) {
+export default function GenerateButton({ onClick, loading = false, polling = false }) {
   return (
     <button className="primary-button" type="button" onClick={onClick} disabled={loading}>
-      {loading ? "Генерация..." : "Найти идеи"}
+      {polling ? "Pipeline работает..." : loading ? "Запуск..." : "Найти идеи"}
     </button>
   );
 }
