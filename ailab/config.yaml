@@ -1,0 +1,14 @@
+app:
+  name: AI Idea Research Lab
+  locale: ru
+  backend_url: http://127.0.0.1:8000
+  frontend_url: http://127.0.0.1:3000
+
+data_sources:
+  reddit: true
+  hackernews: true
+  rss: true
+  manual: true
+
+database:
+  path: backend/data/ailab.db

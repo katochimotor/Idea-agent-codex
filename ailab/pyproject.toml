@@ -1,0 +1,17 @@
+[project]
+name = "ai-idea-research-lab"
+version = "0.1.0"
+description = "Local-first startup idea research tool"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi==0.116.1",
+    "uvicorn[standard]==0.35.0",
+    "pydantic==2.11.7",
+    "sqlmodel==0.0.24",
+    "pywebview==5.4",
+]
+
+[tool.uvicorn]
+factory = false
+reload = true

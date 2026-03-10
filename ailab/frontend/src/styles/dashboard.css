@@ -1,0 +1,100 @@
+.dashboard-layout,
+.detail-layout {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.hero-panel {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 28px;
+}
+
+.hero-panel p {
+  max-width: 680px;
+}
+
+.stats-row,
+.dashboard-bottom {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.dashboard-bottom {
+  grid-template-columns: 1fr 1fr;
+}
+
+.idea-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 16px;
+}
+
+.idea-card {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.idea-card-header,
+.meta-row,
+.card-actions,
+.panel-header,
+.trend-list,
+.tag-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.tag,
+.soft-tag,
+.idea-score,
+.trend-pill,
+.mindmap-node {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 8px 12px;
+}
+
+.tag,
+.idea-score {
+  background: #edf2f7;
+  color: var(--panel-strong);
+}
+
+.soft-tag,
+.trend-pill {
+  background: #fff1df;
+  color: #9a4a05;
+}
+
+.mindmap {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+  min-height: 180px;
+  align-items: center;
+}
+
+.mindmap-node {
+  min-height: 52px;
+  background: #eff6ff;
+  color: #174ea6;
+}
+
+@media (max-width: 900px) {
+  .hero-panel,
+  .stats-row,
+  .dashboard-bottom {
+    grid-template-columns: 1fr;
+    flex-direction: column;
+    align-items: flex-start;
+  }
+}

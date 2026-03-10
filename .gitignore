@@ -1,0 +1,9 @@
+.venv
+node_modules
+dist
+build
+__pycache__
+*.log
+*.sqlite
+data/vector_index
+.env
